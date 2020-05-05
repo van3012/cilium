@@ -558,12 +558,10 @@ var _ = Describe("K8sServicesTest", func() {
 			), "Failed to account for IPv4 fragments to %s (out)", dstIP)
 		}
 
-		testNodePort := func(bpfNodePort bool) {
+		testNodePortDontWait := func(bpfNodePort bool) {
 			var data v1.Service
 			k8s1Name, k8s1IP := kubectl.GetNodeInfo(helpers.K8s1)
 			k8s2Name, k8s2IP := kubectl.GetNodeInfo(helpers.K8s2)
-
-			waitPodsDs()
 
 			err := kubectl.Get(helpers.DefaultNamespace, "service test-nodeport").Unmarshal(&data)
 			Expect(err).Should(BeNil(), "Can not retrieve service")
@@ -700,6 +698,11 @@ var _ = Describe("K8sServicesTest", func() {
 				failBind("::ffff:"+localCiliumHostIPv4, data.Spec.Ports[0].NodePort, "tcp", k8s1Name)
 				failBind("::ffff:"+localCiliumHostIPv4, data.Spec.Ports[1].NodePort, "udp", k8s1Name)
 			}
+		}
+
+		testNodePort := func(bpfNodePort bool) {
+			waitPodsDs()
+			testNodePortDontWait(bpfNodePort)
 		}
 
 		testNodePortExternal := func(checkTCP, checkUDP bool) {
@@ -997,7 +1000,7 @@ var _ = Describe("K8sServicesTest", func() {
 
 				It("Tests NodePort with L7 Policy", func() {
 					applyPolicy(demoPolicy)
-					testNodePort(false)
+					testNodePortDontWait(false)
 				})
 			})
 
