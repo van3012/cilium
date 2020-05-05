@@ -984,6 +984,8 @@ var _ = Describe("K8sServicesTest", func() {
 				)
 
 				BeforeAll(func() {
+					// Wait for pods to be ready before applying L7 policy that may break POD readiness probes.
+					waitPodsDs()
 					demoPolicy = helpers.ManifestGet(kubectl.BasePath(), "l7-policy-demo.yaml")
 				})
 
