@@ -566,8 +566,31 @@ var _ = Describe("K8sServicesTest", func() {
 
 			err := kubectl.Get(helpers.DefaultNamespace, "service test-nodeport").Unmarshal(&data)
 			Expect(err).Should(BeNil(), "Can not retrieve service")
-			httpURL := getHTTPLink(data.Spec.ClusterIP, data.Spec.Ports[0].Port)
-			tftpURL := getTFTPLink(data.Spec.ClusterIP, data.Spec.Ports[1].Port)
+			var httpURL string
+			var tftpURL string
+			// httpURL = getHTTPLink(data.Spec.ClusterIP, data.Spec.Ports[0].Port)
+			// tftpURL = getTFTPLink(data.Spec.ClusterIP, data.Spec.Ports[1].Port)
+			// testCurlRequest(testDSClient, httpURL)
+			// testCurlRequest(testDSClient, tftpURL)
+
+			// From pod via node IPs
+			httpURL = getHTTPLink(k8s1IP, data.Spec.Ports[0].NodePort)
+			tftpURL = getTFTPLink(k8s1IP, data.Spec.Ports[1].NodePort)
+			testCurlRequest(testDSClient, tftpURL)
+			testCurlRequest(testDSClient, httpURL)
+
+			httpURL = getHTTPLink("::ffff:"+k8s1IP, data.Spec.Ports[0].NodePort)
+			tftpURL = getTFTPLink("::ffff:"+k8s1IP, data.Spec.Ports[1].NodePort)
+			testCurlRequest(testDSClient, tftpURL)
+			testCurlRequest(testDSClient, httpURL)
+
+			httpURL = getHTTPLink(k8s2IP, data.Spec.Ports[0].NodePort)
+			tftpURL = getTFTPLink(k8s2IP, data.Spec.Ports[1].NodePort)
+			testCurlRequest(testDSClient, httpURL)
+			testCurlRequest(testDSClient, tftpURL)
+
+			httpURL = getHTTPLink("::ffff:"+k8s2IP, data.Spec.Ports[0].NodePort)
+			tftpURL = getTFTPLink("::ffff:"+k8s2IP, data.Spec.Ports[1].NodePort)
 			testCurlRequest(testDSClient, httpURL)
 			testCurlRequest(testDSClient, tftpURL)
 
@@ -603,27 +626,6 @@ var _ = Describe("K8sServicesTest", func() {
 			tftpURL = getTFTPLink("::ffff:"+k8s2IP, data.Spec.Ports[1].NodePort)
 			doRequests(httpURL, count, k8s1Name)
 			doRequests(tftpURL, count, k8s1Name)
-
-			// From pod via node IPs
-			httpURL = getHTTPLink(k8s1IP, data.Spec.Ports[0].NodePort)
-			tftpURL = getTFTPLink(k8s1IP, data.Spec.Ports[1].NodePort)
-			testCurlRequest(testDSClient, tftpURL)
-			testCurlRequest(testDSClient, httpURL)
-
-			httpURL = getHTTPLink("::ffff:"+k8s1IP, data.Spec.Ports[0].NodePort)
-			tftpURL = getTFTPLink("::ffff:"+k8s1IP, data.Spec.Ports[1].NodePort)
-			testCurlRequest(testDSClient, tftpURL)
-			testCurlRequest(testDSClient, httpURL)
-
-			httpURL = getHTTPLink(k8s2IP, data.Spec.Ports[0].NodePort)
-			tftpURL = getTFTPLink(k8s2IP, data.Spec.Ports[1].NodePort)
-			testCurlRequest(testDSClient, httpURL)
-			testCurlRequest(testDSClient, tftpURL)
-
-			httpURL = getHTTPLink("::ffff:"+k8s2IP, data.Spec.Ports[0].NodePort)
-			tftpURL = getTFTPLink("::ffff:"+k8s2IP, data.Spec.Ports[1].NodePort)
-			testCurlRequest(testDSClient, httpURL)
-			testCurlRequest(testDSClient, tftpURL)
 
 			if bpfNodePort {
 				// From host via local cilium_host
