@@ -27,7 +27,7 @@ func (s *PolicyAPITestSuite) TestRulesDeepEqual(c *C) {
 	var invalidRules Rules
 
 	c.Assert(invalidRules.DeepEqual(nil), Equals, true)
-	c.Assert(invalidRules.DeepEqual(invalidRules), Equals, true)
+	c.Assert(invalidRules.DeepEqual(&invalidRules), Equals, true)
 
 	wcSelector1 := WildcardEndpointSelector
 	validPortRules := Rules{
@@ -48,10 +48,10 @@ func (s *PolicyAPITestSuite) TestRulesDeepEqual(c *C) {
 			}}),
 	}
 
-	c.Assert(invalidRules.DeepEqual(validPortRules), Equals, false)
-	c.Assert(validPortRules.DeepEqual(invalidRules), Equals, false)
+	c.Assert(invalidRules.DeepEqual(&validPortRules), Equals, false)
+	c.Assert(validPortRules.DeepEqual(&invalidRules), Equals, false)
 	c.Assert(validPortRules.DeepEqual(nil), Equals, false)
-	c.Assert(validPortRules.DeepEqual(validPortRules), Equals, true)
+	c.Assert(validPortRules.DeepEqual(&validPortRules), Equals, true)
 
 	// Same as WildcardEndpointSelector, but different pointer.
 	wcSelector2 := NewESFromLabels()
@@ -60,5 +60,5 @@ func (s *PolicyAPITestSuite) TestRulesDeepEqual(c *C) {
 	}
 	validPortRulesClone[0].EndpointSelector = wcSelector2
 
-	c.Assert(validPortRules.DeepEqual(validPortRulesClone), Equals, true)
+	c.Assert(validPortRules.DeepEqual(&validPortRulesClone), Equals, true)
 }

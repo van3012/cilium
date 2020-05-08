@@ -31,6 +31,7 @@ import (
 //
 // Either ingress, egress, or both can be provided. If both ingress and egress
 // are omitted, the rule has no effect.
+// +deepequal-gen:private-method=true
 type Rule struct {
 	// EndpointSelector selects all endpoints which should be subject to
 	// this rule. Cannot be empty.
@@ -62,6 +63,16 @@ type Rule struct {
 	//
 	// +optional
 	Description string `json:"description,omitempty"`
+}
+
+func (r *Rule) DeepEqual(o *Rule) bool {
+	switch {
+	case (r == nil) != (o == nil):
+		return false
+	case (r == nil) && (o == nil):
+		return true
+	}
+	return r.deepEqual(o)
 }
 
 // NewRule builds a new rule with no selector and no policy.

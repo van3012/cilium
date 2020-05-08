@@ -39,13 +39,12 @@ func (rs Rules) String() string {
 
 // DeepEqual is a deepequal function, deeply comparing the
 // receiver with other. the receiver must be non-nil.
-func (rs Rules) DeepEqual(other Rules) bool {
+func (rs *Rules) DeepEqual(other *Rules) bool {
 	switch {
 	case (rs == nil) != (other == nil):
 		return false
 	case (rs == nil) && (other == nil):
 		return true
 	}
-	r := &rs
-	return r.deepEqual(&other)
+	return rs.deepEqual(other)
 }

@@ -137,6 +137,21 @@ func (in *CiliumNetworkPolicy) deepEqual(other *CiliumNetworkPolicy) bool {
 		return false
 	}
 
+	if (in.Spec == nil) != (other.Spec == nil) {
+		return false
+	} else if in.Spec != nil {
+		if !in.Spec.DeepEqual(other.Spec) {
+			return false
+		}
+	}
+
+	if ((in.Specs != nil) && (other.Specs != nil)) || ((in.Specs == nil) != (other.Specs == nil)) {
+		in, other := &in.Specs, &other.Specs
+		if other == nil || !in.DeepEqual(other) {
+			return false
+		}
+	}
+
 	if !in.Status.DeepEqual(&other.Status) {
 		return false
 	}

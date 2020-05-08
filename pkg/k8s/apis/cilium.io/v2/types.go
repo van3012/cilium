@@ -64,11 +64,9 @@ type CiliumNetworkPolicy struct {
 	metav1.ObjectMeta `json:"metadata"`
 
 	// Spec is the desired Cilium specific rule specification.
-	// +deepequal-gen=false
 	Spec *api.Rule `json:"spec,omitempty"`
 
 	// Specs is a list of desired Cilium specific rule specification.
-	// +deepequal-gen=false
 	Specs api.Rules `json:"specs,omitempty"`
 
 	// Status is the status of the Cilium policy rule
@@ -103,7 +101,6 @@ func (in *CiliumNetworkPolicy) DeepEqual(other *CiliumNetworkPolicy) bool {
 	delete(other.GetAnnotations(), v1.LastAppliedConfigAnnotation)
 
 	return comparator.MapStringEquals(in.GetAnnotations(), other.GetAnnotations()) &&
-		in.SpecEquals(other) &&
 		in.deepEqual(other)
 }
 
@@ -235,14 +232,6 @@ func (r *CiliumNetworkPolicy) SetDerivedPolicyStatus(derivativePolicyName string
 		r.Status.DerivativePolicies = map[string]CiliumNetworkPolicyNodeStatus{}
 	}
 	r.Status.DerivativePolicies[derivativePolicyName] = status
-}
-
-// SpecEquals returns true if the spec and specs metadata is the sa
-func (r *CiliumNetworkPolicy) SpecEquals(o *CiliumNetworkPolicy) bool {
-	if o == nil {
-		return r == nil
-	}
-	return r.Spec.DeepEqual(o.Spec) && r.Specs.DeepEqual(o.Specs)
 }
 
 // AnnotationsEquals returns true if ObjectMeta.Annotations of each

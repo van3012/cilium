@@ -64,7 +64,6 @@ func (in *EndpointSelector) DeepEqual(other *EndpointSelector) bool {
 	return in.deepEqual(other)
 }
 
-
 // LabelSelectorString returns a user-friendly string representation of
 // EndpointSelector.
 func (n *EndpointSelector) LabelSelectorString() string {

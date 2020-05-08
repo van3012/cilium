@@ -493,7 +493,7 @@ func BenchmarkSpecEquals(b *testing.B) {
 		},
 	}
 	o := r.DeepCopy()
-	if !r.SpecEquals(o) {
+	if !r.DeepEqual(o) {
 		b.Error("Both structures should be equal!")
 	}
 	b.Run("Reflected SpecEquals", func(b *testing.B) {
@@ -508,7 +508,7 @@ func BenchmarkSpecEquals(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			r.SpecEquals(o)
+			r.DeepEqual(o)
 		}
 	})
 }
