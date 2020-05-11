@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 
 	cilium_api_v2 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2"
 	cilium_cli "github.com/cilium/cilium/pkg/k8s/client/clientset/versioned/typed/cilium.io/v2"
@@ -44,6 +45,9 @@ var (
 	// used for Update operations in k8s as some of its fields were are not
 	// populated.
 	CiliumEndpointStore cache.Indexer
+
+	// once is used to make sure CiliumEndpointsInit is only setup once.
+	once sync.Once
 )
 
 // identityIndexFunc index identities by ID.
@@ -61,18 +65,20 @@ func identityIndexFunc(obj interface{}) ([]string, error) {
 
 // CiliumEndpointsInit starts a CiliumEndpointWatcher
 func CiliumEndpointsInit(ciliumNPClient cilium_cli.CiliumV2Interface) {
-	CiliumEndpointStore = cache.NewIndexer(cache.DeletionHandlingMetaNamespaceKeyFunc, indexers)
+	once.Do(func() {
+		CiliumEndpointStore = cache.NewIndexer(cache.DeletionHandlingMetaNamespaceKeyFunc, indexers)
 
-	ciliumEndpointInformer := informer.NewInformerWithStore(
-		cache.NewListWatchFromClient(ciliumNPClient.RESTClient(),
-			"ciliumendpoints", v1.NamespaceAll, fields.Everything()),
-		&cilium_api_v2.CiliumEndpoint{},
-		0,
-		cache.ResourceEventHandlerFuncs{},
-		convertToCiliumEndpoint,
-		CiliumEndpointStore,
-	)
-	go ciliumEndpointInformer.Run(wait.NeverStop)
+		ciliumEndpointInformer := informer.NewInformerWithStore(
+			cache.NewListWatchFromClient(ciliumNPClient.RESTClient(),
+				"ciliumendpoints", v1.NamespaceAll, fields.Everything()),
+			&cilium_api_v2.CiliumEndpoint{},
+			0,
+			cache.ResourceEventHandlerFuncs{},
+			convertToCiliumEndpoint,
+			CiliumEndpointStore,
+		)
+		go ciliumEndpointInformer.Run(wait.NeverStop)
+	})
 }
 
 // convertToCiliumEndpoint converts a CiliumEndpoint to a minimal CiliumEndpoint
@@ -129,4 +135,22 @@ func HasCEWithIdentity(identity string) bool {
 	ces, _ := CiliumEndpointStore.ByIndex(identityIndex, identity)
 
 	return len(ces) != 0
+}
+
+// HasCE returns true or false if the Cilium Endpoint store has the endpoint
+// with the given name.
+func HasCE(ns, name string) (*cilium_api_v2.CiliumEndpoint, bool, error) {
+	if CiliumEndpointStore == nil {
+		return nil, false, nil
+	}
+	cepKey := fmt.Sprintf("%s/%s", ns, name)
+	item, exists, err := CiliumEndpointStore.GetByKey(cepKey)
+	if err != nil {
+		return nil, false, err
+	}
+	if !exists {
+		return nil, false, nil
+	}
+	cep := item.(*cilium_api_v2.CiliumEndpoint)
+	return cep, exists, nil
 }
