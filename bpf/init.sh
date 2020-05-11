@@ -33,8 +33,6 @@ BPFFS_ROOT=${15}
 NODE_PORT=${16}
 NODE_PORT_BIND=${17}
 MCPU=${18}
-NODE_PORT_IPV4_ADDRS=${19}
-NODE_PORT_IPV6_ADDRS=${20}
 
 ID_HOST=1
 ID_WORLD=2
@@ -551,59 +549,6 @@ if [ "$MODE" = "direct" ] || [ "$MODE" = "ipvlan" ] || [ "$MODE" = "routed" ] ||
 			echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 		fi
 
-		if [ "$NODE_PORT_IPV4_ADDRS" != "<nil>" ]; then
-			declare -A v4_addrs
-			for a in ${NODE_PORT_IPV4_ADDRS//;/ }; do
-				IFS== read iface addr <<< "$a"
-				v4_addrs[$iface]=$addr
-			done
-		fi
-		if [ "$NODE_PORT_IPV6_ADDRS" != "<nil>" ]; then
-			declare -A v6_addrs
-			for a in ${NODE_PORT_IPV6_ADDRS//;/ }; do
-				IFS== read iface addr <<< "$a"
-				v6_addrs[$iface]=$addr
-			done
-		fi
-
-		NP_COPTS=""
-
-		if [ "$NODE_PORT" = "true" ] ; then
-			# First device from the list is used for direct routing between nodes
-			DIRECT_ROUTING_DEV=$(echo "${NATIVE_DEVS}" | cut -d\; -f1)
-			DIRECT_ROUTING_DEV_IDX=$(cat /sys/class/net/${DIRECT_ROUTING_DEV}/ifindex)
-			NP_COPTS="${NP_COPTS} -DDIRECT_ROUTING_DEV_IFINDEX=${DIRECT_ROUTING_DEV_IDX}"
-			if [ "$IP4_HOST" != "<nil>" ]; then
-				NP_COPTS="${NP_COPTS} -DIPV4_DIRECT_ROUTING=${v4_addrs[$DIRECT_ROUTING_DEV]}"
-			fi
-			if [ "$IP6_HOST" != "<nil>" ]; then
-				NP_COPTS="${NP_COPTS} -DIPV6_DIRECT_ROUTING={.addr={${v6_addrs[$DIRECT_ROUTING_DEV]}}}"
-			fi
-		fi
-
-		for NATIVE_DEV in ${NATIVE_DEVS//;/ }; do
-			LOCAL_COPTS="${NP_COPTS} -DSECLABEL=${ID_WORLD}"
-			NATIVE_DEV_IDX=$(cat /sys/class/net/${NATIVE_DEV}/ifindex)
-			CALLS_MAP=cilium_calls_netdev_${NATIVE_DEV_IDX}
-
-			if [ "$NODE_PORT" = "true" ]; then
-				LOCAL_COPTS="${LOCAL_COPTS} -DLB_L3 -DLB_L4 -DDISABLE_LOOPBACK_LB -DNATIVE_DEV_IFINDEX=${NATIVE_DEV_IDX}"
-				if [ "$IP4_HOST" != "<nil>" ]; then
-					LOCAL_COPTS="${LOCAL_COPTS} -DIPV4_NODEPORT=${v4_addrs[$NATIVE_DEV]}"
-				fi
-				if [ "$IP6_HOST" != "<nil>" ]; then
-					LOCAL_COPTS="${LOCAL_COPTS} -DIPV6_NODEPORT={.addr={${v6_addrs[$NATIVE_DEV]}}}"
-				fi
-			fi
-
-			bpf_load $NATIVE_DEV "$LOCAL_COPTS" "ingress" bpf_host.c bpf_host.o "from-netdev" $CALLS_MAP
-			if [ "$NODE_PORT" = "true" ]; then
-				bpf_load $NATIVE_DEV "$LOCAL_COPTS" "egress" bpf_host.c bpf_host.o "to-netdev" $CALLS_MAP
-			else
-				bpf_unload $NATIVE_DEV "egress"
-			fi
-		done
-
 		echo "$NATIVE_DEVS" > $RUNDIR/device.state
 	fi
 else
@@ -684,15 +629,9 @@ else
 	bpf_clear_cgroups $CGROUP_ROOT recvmsg6
 fi
 
-# bpf_host.o requires to see an updated node_config.h which includes ENCAP_IFINDEX
+COPTS="-DPOD_ENDPOINT=1 -DSECLABEL=${ID_WORLD}"
 CALLS_MAP="cilium_calls_netdev_ns_${ID_HOST}"
-COPTS="-DSECLABEL=${ID_HOST}"
-if [ "$MODE" == "ipvlan" ]; then
-	COPTS+=" -DENABLE_EXTRA_HOST_DEV"
-fi
-bpf_load $HOST_DEV1 "$COPTS" "egress" bpf_host.c bpf_host.o from-host $CALLS_MAP
-bpf_load $HOST_DEV1 "" "ingress" bpf_host.c bpf_host.o to-host $CALLS_MAP
-bpf_load $HOST_DEV2 "" "ingress" bpf_host.c bpf_host.o to-host $CALLS_MAP
+bpf_load $HOST_DEV2 "$COPTS" "ingress" bpf_host.c bpf_host.o to-host $CALLS_MAP
 if [ "$IPSEC" == "true" ]; then
 	if [ "$ENCRYPT_DEV" != "<nil>" ]; then
 		bpf_load $ENCRYPT_DEV "" "ingress" bpf_network.c bpf_network.o from-network $CALLS_MAP
