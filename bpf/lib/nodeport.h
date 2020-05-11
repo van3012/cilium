@@ -763,6 +763,13 @@ static __always_inline bool nodeport_nat_ipv4_needed(struct __ctx_buff *ctx,
 			struct remote_endpoint_info *info;
 			*from_endpoint = true;
 
+#ifdef IPV4_NATIVE_ROUTING_CIDR
+			if (ipv4_is_in_subnet(ip4->daddr,
+					      IPV4_NATIVE_ROUTING_CIDR,
+					      IPV4_NATIVE_ROUTING_CIDR_LEN))
+				return false;
+#endif
+
 			info = ipcache_lookup4(&IPCACHE_MAP, ip4->daddr,
 					       V4_CACHE_KEY_LEN);
 			if (info != NULL) {
